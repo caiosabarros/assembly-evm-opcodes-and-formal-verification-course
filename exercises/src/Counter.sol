@@ -11,4 +11,8 @@ contract Counter {
     function increment() public {
         number++;
     }
+
+    function retrieve() public returns (uint256) {
+        return number;
+    }
 }

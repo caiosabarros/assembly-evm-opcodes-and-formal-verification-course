@@ -1,0 +1,90 @@
+// Huff Version of Counter Contract
+
+/* Function Interfaces */
+
+#define function increment() nonpayable returns()
+#define function setNumber(uint256) nonpayable returns()
+#define function retrieve() nonpayable returns(uint256)
+#define constant FSP = FREE_STORAGE_POINTER()
+
+// increment macro function
+#define macro INCREMENT() = takes(0) returns(0) {
+	// load number from storage at slot 0
+	[FSP]                             //[FSP]
+	sload                           //[number]
+	// push number 1 onto stack
+	push1 0x01                       //[1, number]
+	// add opcode
+	add                             //[number + 1]
+	// store it in storage again
+	[FSP]                             //[FSP,number+1]
+	sstore                          //[]
+	stop
+}
+
+// setNumber macro function
+#define macro SET_NUMBER() = takes(0) returns(0) {
+	push1 0x04                      //[0x4]
+	calldataload                    //[value]
+	// store the number in the right slot
+	[FSP] 				//[FSP, value]
+	sstore                          //[]
+	stop
+}
+
+// retrieve macro function
+#define macro RETRIEVE() = takes(0) returns(0) {
+	[FSP]                             //[FSP]
+	sload                           //[value]
+	push0                           //[0, value]
+	mstore                          //[]
+	0x20                           //[0]
+	push0                         //[20,0]
+	return                          //[]
+}
+
+#define macro MAIN() = takes(0) returns (0) {
+	// load callldata
+	push0                   //[0]
+	calldataload            //[calldata]
+	
+	// function dispatching:
+	
+	// get function selector from calldata
+	0xe0                    //[0xE0, calldata]
+	shr                     //[function_selector]
+	dup1 			//[function_selector, function_selector]
+	dup1                    //[f_s,f_s,f_s]
+	
+	// compare function selector with `increment`
+	__FUNC_SIG(increment)   //[increment, f_s, f_s, f_s]
+	eq                      //[bool, f_s, f_s]
+	increment_func          //[increment_func, bool, f_s, f_s]
+	jumpi
+	
+	// compare function selector with `setNumber`
+	__FUNC_SIG(setNumber)   //[setNumber, f_s, f_s]
+	eq                      //[bool, f_s]
+	set_num_func            //[set_num_func, bool, f_s]
+	jumpi      
+
+	// compare function selector with `retrieve`
+	__FUNC_SIG(retrieve)    //[retrieve, f_s]
+	eq                      //[bool]
+	retrieve_func           //[retrieve_func, bool]
+	jumpi                   
+
+	0x0 0x0 revert
+
+	// reference for increment macro function
+	increment_func:
+		INCREMENT()
+
+	// reference for setNumber macro function
+	set_num_func:
+		SET_NUMBER()
+
+	retrieve_func:
+		RETRIEVE()
+}
+
